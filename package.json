@@ -1,5 +1,5 @@
 {
-  "name": "express-api-jwt-auth",
+  "name": "pokevault",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
@@ -8,8 +8,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["pokemon", "tcg", "vault"],
+  "author": "John Pham",
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.1.1",
