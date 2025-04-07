@@ -19,7 +19,8 @@ router.post('/', verifyToken, async (req, res) => {
 // READ (Show) Binder
 router.get('/:binderId', verifyToken, async (req, res) => {
   try {
-    const binder = await Binder.findById(req.params.binderId).populate('author');
+    // populate author of hoot and comments
+    const binder = await Binder.findById(req.params.binderId).populate('author', 'cards.author');
     res.status(200).json(binder);
   } catch (err) {
     res.status(500).json({ err: err.message });
@@ -46,11 +47,11 @@ router.put('/:binderId', verifyToken, async (req, res) => {
     // issue JSON response
     res.status(200).json(updatedBinder);
   } catch {
-    res.status(err).json({ err: err.message });
+    res.status(500).json({ err: err.message });
   }
 });
 
-// delete Binder
+// DELETE Binder
 router.delete('/:binderId', verifyToken, async (req, res) => {
   try {
     const binder = await Binder.findById(req.params.binderId);
@@ -65,5 +66,70 @@ router.delete('/:binderId', verifyToken, async (req, res) => {
     res.status(500).json({ err: err.message });
   }
 });
+
+// CREATE CARD
+router.post('/:binderId/cards', verifyToken, async (req, res) => {
+  try {
+    req.body.author = req.user._id;
+
+    const binder = await Binder.findById(req.params.binderId);
+    binder.cards.push(req.body);
+    await binder.save();
+
+    // find the newly created comment
+    const newCard = binder.cards[binder.cards.length - 1];
+
+    newCard._doc.author = req.user;
+
+    // respond with the newCard
+    res.status(201).json(newCard);
+  } catch (err) {
+    res.status(500).json({ err: err.message });
+  }
+});
+
+// UPDATE Card
+router.put('/:binderId/cards/:cardId', verifyToken, async (req, res) => {
+  try {
+    const binder = await Binder.findById(req.params.binderId);
+    const card = binder.cards.id(req.params.cardId);
+
+    // ensure the current user is the author of the card
+    if (binder.author.toString() !== req.user._id) {
+      return res.status(403).json({ message: 'You are not authorized to edit this comment' });
+    }
+
+    if (!card) return res.status(404).json({ message: 'Card not found in binder' });
+
+    Object.assign(card.data, req.body);
+    card.markModified('data');
+    await binder.save();
+
+    res.status(200).json({ message: 'Card updated successfully' });
+  } catch (err) {
+    res.status(500).json({ err: err.message });
+  }
+});
+
+// DELETE Card
+router.delete("/:binderId/cards/:cardId", verifyToken, async (req, res) => {
+  try {
+    const binder = await Binder.findById(req.params.binderId);
+    const card = binder.cards.id(req.params.cardId);
+
+    // ensure the current user is the author of the card
+    if (binder.author.toString() !== req.user._id) {
+      return res.status(403).json({ message: 'You are not authorized to edit this comment' });
+    }
+
+    if (!card) return res.status(404).json({ message: 'Card not found in binder' });
+
+    binder.cards.remove({ _id: req.params.cardId });
+    await binder.save();
+    res.status(200).json({ message: 'Card deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ err: err.message });
+  }
+})
 
 module.exports = router;
