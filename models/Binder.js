@@ -1,7 +1,15 @@
 const mongoose = require('mongoose');
 
 // Embedded card schema inside binder
-const cardSchema = new mongoose.Schema({}, { strict: false });
+const cardSchema = new mongoose.Schema(
+  {
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+  },
+  { timestamps: true, strict: false }
+);
 
 const binderSchema = new mongoose.Schema(
   {

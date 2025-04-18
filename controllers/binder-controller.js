@@ -16,11 +16,20 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
+router.get('/', verifyToken, async (req, res) => {
+  try {
+    const binders = await Binder.find({}).populate('author').sort({ createdAt: 'desc' });
+    res.status(200).json(binders);
+  } catch (err) {
+    res.status(500).json({ err: err.message });
+  }
+});
+
 // READ (Show) Binder
 router.get('/:binderId', verifyToken, async (req, res) => {
   try {
-    // populate author of hoot and comments
-    const binder = await Binder.findById(req.params.binderId).populate('author', 'cards.author');
+    // populate author of binders and cards
+    const binder = await Binder.findById(req.params.binderId).populate(['author', 'cards.author']);
     res.status(200).json(binder);
   } catch (err) {
     res.status(500).json({ err: err.message });
@@ -72,11 +81,11 @@ router.post('/:binderId/cards', verifyToken, async (req, res) => {
   try {
     req.body.author = req.user._id;
 
-    const binder = await Binder.findById(req.params.binderId);
+    const binder = await Binder.findById(req.params.binderId).populate(['author', 'cards.author']);
     binder.cards.push(req.body);
     await binder.save();
 
-    // find the newly created comment
+    // find the newly created card
     const newCard = binder.cards[binder.cards.length - 1];
 
     newCard._doc.author = req.user;
@@ -96,7 +105,7 @@ router.put('/:binderId/cards/:cardId', verifyToken, async (req, res) => {
 
     // ensure the current user is the author of the card
     if (binder.author.toString() !== req.user._id) {
-      return res.status(403).json({ message: 'You are not authorized to edit this comment' });
+      return res.status(403).json({ message: 'You are not authorized to edit this card' });
     }
 
     if (!card) return res.status(404).json({ message: 'Card not found in binder' });
@@ -112,14 +121,14 @@ router.put('/:binderId/cards/:cardId', verifyToken, async (req, res) => {
 });
 
 // DELETE Card
-router.delete("/:binderId/cards/:cardId", verifyToken, async (req, res) => {
+router.delete('/:binderId/cards/:cardId', verifyToken, async (req, res) => {
   try {
     const binder = await Binder.findById(req.params.binderId);
     const card = binder.cards.id(req.params.cardId);
 
     // ensure the current user is the author of the card
     if (binder.author.toString() !== req.user._id) {
-      return res.status(403).json({ message: 'You are not authorized to edit this comment' });
+      return res.status(403).json({ message: 'You are not authorized to edit this card' });
     }
 
     if (!card) return res.status(404).json({ message: 'Card not found in binder' });
@@ -130,6 +139,6 @@ router.delete("/:binderId/cards/:cardId", verifyToken, async (req, res) => {
   } catch (err) {
     res.status(500).json({ err: err.message });
   }
-})
+});
 
 module.exports = router;
